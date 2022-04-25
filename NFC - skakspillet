@@ -1,0 +1,176 @@
+#include <Wire.h>
+#include <PN532_I2C.h>
+#include <Adafruit_PN532.h>
+#include <PN532.h>
+  
+#define PN532_IRQ0   (9)
+#define PN532_RESET0 (8)  
+Adafruit_PN532 nfc0(PN532_IRQ0, PN532_RESET0);
+
+#define PN532_IRQ1   (3)
+#define PN532_RESET1 (2)  
+Adafruit_PN532 nfc1(PN532_IRQ1, PN532_RESET1);
+
+#define PN532_IRQ2   (7)
+#define PN532_RESET2 (6)  
+Adafruit_PN532 nfc2(PN532_IRQ2, PN532_RESET2);
+
+#define PN532_IRQ3   (5)
+#define PN532_RESET3 (4)  
+Adafruit_PN532 nfc3(PN532_IRQ3, PN532_RESET3);
+
+
+//const int LED = A0;
+
+//int buttonstate = 0;
+
+int nfcStage = 0;
+
+  
+
+void setup(void) {
+  Wire.begin();
+
+  Serial.begin(115200); 
+  //while (!Serial) delay(10);   
+
+  allOff();
+
+  //pinMode(LED, OUTPUT);  
+
+  
+  Serial.println("RESET!!");
+}   
+
+  const uint8_t correct0[7] =   { 0x04, 0x58, 0x4a, 0xc2, 0x6e, 0x67, 0x81 };   // Correct UID for reader#0
+  const uint8_t correct1[7] =   { 0x04, 0x53, 0x4a, 0xc2, 0x6e, 0x67, 0x81 };   // Correct UID for reader#1
+  const uint8_t correct2[7] =   { 0x04, 0x4F, 0x4a, 0xc2, 0x6e, 0x67, 0x81 };   // Correct UID for reader#2
+  const uint8_t correct3[7] =   { 0x04, 0x60, 0x4a, 0xc2, 0x6e, 0x67, 0x81 };   // Correct UID for reader#3
+  const uint8_t correct4[7] =   { 0x04, 0x5C, 0x4a, 0xc2, 0x6e, 0x67, 0x81 };   // Correct UID for reader#4
+  uint8_t uid[7] = { 0, 0, 0, 0, 0, 0, 0 };  // Buffer to store the returned UID
+  uint8_t uidLength;                        // Length of the UID (4 or 7 bytes depending on ISO14443A card type)   
+  bool success;    
+    //THIS PART OF THE CODE ONLY RUNS IF EVERY UID MATCHES THE CORRECT READER.
+void loop(void) {
+static uint8_t retrycount=32;
+nfcStage=0;
+
+
+//    if (nfcStage == 0){
+    Serial.print("Stage 0 ");
+    
+    nfc0.begin();
+    nfc0.setPassiveActivationRetries(retrycount);
+    nfc0.SAMConfig();
+    success = nfc0.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);
+
+  if (success) {
+    nfc0.PrintHex(uid, uidLength);
+    Serial.println("");
+    if(compareUIDs(uid,correct0)) nfcStage++;
+    else nfcStage=0;
+    success=0;
+  }
+        else Serial.println("Nope");
+
+      allOff();
+
+//    }
+//  if (nfcStage == 1){
+         Serial.print("Stage 1 ");
+
+      nfc1.begin();
+          nfc1.setPassiveActivationRetries(retrycount);
+      nfc1.SAMConfig();
+      success = nfc1.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);
+
+      if(success) {
+        nfc1.PrintHex(uid, uidLength);
+        Serial.println("");
+        if(compareUIDs(uid,correct1)) nfcStage++;
+        else nfcStage=0;
+
+        success=0;  
+      }
+      else Serial.println("Nope");
+              allOff();
+
+ // }
+
+ // if(nfcStage==2) {
+        Serial.print("Stage 2 ");
+      nfc2.begin();
+          nfc2.setPassiveActivationRetries(retrycount);
+      nfc2.SAMConfig();
+      success = nfc2.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);
+
+      if(success) {
+        nfc2.PrintHex(uid, uidLength);
+        Serial.println("");
+        if(compareUIDs(uid,correct2)) nfcStage++;
+        else nfcStage=0;    
+        success=0;  
+      }
+            else Serial.println("Nope");
+
+              allOff();
+
+  //}
+
+  //if(nfcStage==3) {
+        Serial.print("Stage 3 ");
+      nfc3.begin();
+          nfc3.setPassiveActivationRetries(retrycount);
+      nfc3.SAMConfig();
+      success = nfc3.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);
+
+      if(success) {
+        nfc3.PrintHex(uid, uidLength);
+        Serial.println("");
+        if(compareUIDs(uid,correct3)) nfcStage++;
+        else nfcStage=0;
+        success=0;  
+      }
+            else Serial.println("Nope");
+
+  
+  allOff();
+
+  //}
+
+  if(nfcStage==4) {
+    Serial.println("yeha!");
+    //digitalWrite(LED, LOW);
+    nfcStage=0;
+  }
+
+  //delay(500);
+}
+
+bool compareUIDs(uint8_t first[7],uint8_t second[7]) //only works with 7 byte uids
+{
+      uint8_t matchingBytes=0;
+
+
+      for (uint8_t k=0; k < 7; k++)
+          {
+        if(first[k]==second[k]) matchingBytes++;
+          }
+
+      if (matchingBytes==7) //is the id matching with an intended length?
+        {
+        Serial.print("MATCH! ");
+        return true;
+      }
+    Serial.println("No deal.");
+    return false;
+}
+
+void allOff(){
+    digitalWrite(PN532_RESET0,LOW);
+    digitalWrite(PN532_RESET1,LOW);
+    digitalWrite(PN532_RESET2,LOW);
+    digitalWrite(PN532_RESET3,LOW);
+    delay(50);
+
+}
